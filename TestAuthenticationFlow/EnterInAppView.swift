@@ -13,11 +13,9 @@ struct EnterInAppView: View {
     //otherwise - is registring
     let isLogin: Bool
     private let mainLabel: String
-    
-    //0182 - Russia id
-    @State private var selectedCountryID = "0182"
-    @State private var numberTextLimit = 10
-    @State private var numberText = ""
+
+    //вместо state будет паблишер в VM, который скажет - успешно ли отправлен код или нет
+    @State private var isSuccessSendCode = false
     
     init(isLogin: Bool) {
         if isLogin {
@@ -29,27 +27,26 @@ struct EnterInAppView: View {
     }
     
     var body: some View {
-        VStack(alignment:.leading) {
-            Text("Номер телефона")
-                .font(.footnote)
-            HStack {
-                NumberPicker(selectedCountryID: $selectedCountryID,
-                             numberLimit: $numberTextLimit,
-                             numberText: $numberText)
+        ZStack {
+            AppearancesResources.backgroundColor
+                .ignoresSafeArea(.all)
+                .zIndex(-1)
+            
+            if isSuccessSendCode {
+                VereficationView()
+                    .transition(AnyTransition.asymmetric(
+                        insertion: .move(edge: .trailing),
+                        removal: .move(edge: .trailing)))
+               
                 
-                TextField("", text: $numberText)
-                    .setCustomBorder()
-                    .keyboardType(.numberPad)
-                    .onChange(of: numberText) { oldValue, newValue in
-                        let newCount = newValue.count
-                        if newCount > numberTextLimit {
-                            numberText = String(newValue.dropLast(newCount-numberTextLimit))
-                        }
-                    }
             }
-            Spacer()
+            if !isSuccessSendCode {
+                SendNumberCodeView(isSuccess: $isSuccessSendCode)
+                    .transition(AnyTransition.asymmetric(
+                        insertion: .move(edge: .leading),
+                        removal: .move(edge: .leading)))
+            }
         }
-            .padding(.horizontal, 30)
         //for not changing color of toolbar in scroll
         .toolbarBackground(AppearancesResources.backgroundColor, for: .navigationBar)
         .toolbarBackground(.automatic, for: .navigationBar)
@@ -68,36 +65,79 @@ struct EnterInAppView: View {
                         .foregroundStyle(.white)
                 }
             }
+    }
+        
+        
+    }
+    
+    
+}
+
+
+// MARK: Verefication VIEW
+struct VereficationView : View {
+    var body: some View {
+        Text("Верефикация")
+            .foregroundStyle(.white)
+            .font(.title)
+    }
+}
+
+
+
+// MARK: SendNumberCode VIEW
+struct SendNumberCodeView : View {
+    @State private var selectedCountryID = "0182"
+    @State private var numberTextLimit = 10
+    @State private var numberText = ""
+    
+    @Binding var isSuccess: Bool
+    
+    var body: some View {
+        VStack(alignment:.leading) {
+            Text("Номер телефона")
+                .font(.footnote)
+                .padding(.bottom, 5)
+            HStack {
+                NumberPicker(selectedCountryID: $selectedCountryID,
+                             numberLimit: $numberTextLimit,
+                             numberText: $numberText)
+                .padding(.trailing, 10)
+                TextField("", text: $numberText)
+                    .setCustomBorder()
+                    .keyboardType(.numberPad)
+                    .onChange(of: numberText) { oldValue, newValue in
+                        let newCount = newValue.count
+                        if newCount > numberTextLimit {
+                            numberText = String(newValue.dropLast(newCount-numberTextLimit))
+                        }
+                    }
+                    .foregroundStyle(.white)
+            }
+            .padding(.bottom, 15)
+            
+            VStack {
+                
+                Text("Код придет на ваш номер телефона")
+                    .font(.footnote)
+                    .padding(.bottom, 50)
+                Button("Получить код") {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        isSuccess = true
+                    }
+                }
+                .setCustomButton()
+            }
+            
+            Spacer()
         }
         
-        
-    }
-    
-    
-}
-
-struct CustomBorderModifier : ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding(10)
-            .padding(.vertical,3)
-            .overlay {
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(lineWidth: 1)
-                    .fill(AppearancesResources.frameGradient)
-            }
-            .padding(0.5)
-    }
-}
-
-extension View {
-    func setCustomBorder() -> some View{
-        self.modifier(CustomBorderModifier())
+        .frame(width: 350)
     }
 }
 
 
-// MARK: Number picker
+// MARK: NumberPicker VIEW
 struct NumberPicker : View {
     @Binding var selectedCountryID: String
     @Binding var numberLimit:Int
@@ -173,11 +213,7 @@ extension Bundle {
 
 #Preview {
     NavigationStack {
-        ZStack {
-            AppearancesResources.backgroundColor
-                .ignoresSafeArea(.all)
             
             EnterInAppView(isLogin: true)
-        }
     }
 }

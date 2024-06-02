@@ -38,22 +38,17 @@ struct MainView: View {
                     .font(.title3)
             }
             .padding(.bottom,100)
-            
-            Button {
+            NavigationLink {
                 if isPincodeEnter {
-                    //go to pincode view
+                    
                 } else {
-                    //go to login view
+                    EnterInAppView(isLogin: true)
                 }
             } label: {
-                    Text(logButtonLabel)
-                        .foregroundStyle(.white)
-                        .frame(width: 350,height: 60)
-                        .background(
-                            RoundedRectangle(cornerRadius: 30)
-                                .fill( AppearancesResources.frameGradient)
-                        )
+                Text(logButtonLabel)
+                    .setCustomButton()
             }
+            
             .padding(.bottom,100)
             
             
@@ -86,9 +81,11 @@ struct AppLogoImage : View {
 }
 
 #Preview {
-    ZStack {
-        AppearancesResources.backgroundColor
-            .ignoresSafeArea(.all)
-        MainView(isPincodeExist: false)
+    NavigationStack {
+        ZStack {
+            AppearancesResources.backgroundColor
+                .ignoresSafeArea(.all)
+            MainView(isPincodeExist: false)
+        }
     }
 }

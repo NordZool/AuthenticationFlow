@@ -15,6 +15,9 @@ struct ContentView: View {
 //            MainView(isPincodeExist: false)
             EnterInAppView(isLogin: false)
         }
+        .onAppear(perform: {
+            print(CountryData.countries.count)
+        })
     }
 }
 

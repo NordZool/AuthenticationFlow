@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 
+//MARK: VIEWMODIFIERS
 struct OtpModifier: ViewModifier {
     
     @Binding var pin : String
@@ -16,7 +17,9 @@ struct OtpModifier: ViewModifier {
 
     func limitText(_ upper : Int) {
         if pin.count > upper {
-            self.pin = String(pin.suffix(upper))
+            DispatchQueue.main.async {
+                self.pin = String(pin.suffix(upper))
+            }
         }
     }
     
@@ -35,7 +38,7 @@ struct CustomButtonModifier : ViewModifier {
     func body(content: Content) -> some View {
         content
             .foregroundStyle(.white)
-            .frame(width: 350,height: 60)
+            .frame(width: 350,height: 55)
             .background(
                 RoundedRectangle(cornerRadius: 30)
                     .fill(disable ? AnyShapeStyle(.gray) : AnyShapeStyle(AppearancesResources.frameGradient))
@@ -72,5 +75,22 @@ extension View {
     
     func setPinTextField(pin: Binding<String>) -> some View {
         self.modifier(OtpModifier(pin: pin))
+    }
+}
+
+
+//MARK: VIEWS
+
+
+struct BackButton : View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        Button {
+            dismiss.callAsFunction()
+        } label: {
+            Image(systemName: "arrow.left")
+                .foregroundStyle(.white)
+        }
     }
 }

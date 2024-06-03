@@ -8,8 +8,6 @@
 import SwiftUI
 
 struct EnterInAppView: View {
-    @Environment(\.dismiss) var dismiss
-    
     //otherwise - is registring
     let isLogin: Bool
     private let mainLabel: String
@@ -33,10 +31,11 @@ struct EnterInAppView: View {
                 .zIndex(-1)
             VStack {
                 if isSuccessSendCode {
-                    VereficationView()
+                    VereficationView(buttonLabel: mainLabel)
                         .transition(AnyTransition.asymmetric(
                             insertion: .move(edge: .trailing),
                             removal: .move(edge: .trailing)))
+                        .padding(.top, 20)
                     
                     
                 }
@@ -61,12 +60,7 @@ struct EnterInAppView: View {
                     .font(.title2)
             }
             ToolbarItem(placement:.topBarLeading) {
-                Button {
-                    dismiss.callAsFunction()
-                } label: {
-                    Image(systemName: "arrow.left")
-                        .foregroundStyle(.white)
-                }
+              BackButton()
             }
         }
         
@@ -80,13 +74,19 @@ struct EnterInAppView: View {
 // MARK: Verefication VIEW
 struct VereficationView : View {
     @State private var pincode: String = ""
-    
+    let buttonLabel: String
+    //timer
+    @State private var timeRemaining = 300
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    @State private var showAnotherSendButton = false
+
     var body: some View {
         VStack {
             Text("Верефикация")
                 .foregroundStyle(.white)
                 .font(.title)
-                .padding(.bottom, 15)
+                .padding(.bottom,-8)
+            
             Text("""
                 Введите код из смс,
                 что мы вам отправили
@@ -95,28 +95,83 @@ struct VereficationView : View {
             .foregroundStyle(.gray)
             .font(.subheadline)
             .multilineTextAlignment(.center)
-            .padding(.bottom, 20)
+            .frame(height: 80)
             
-            Text("""
+            Group {
+                if showAnotherSendButton {
+                    Button {
+                        showAnotherSendButton = false
+                    } label: {
+                        VStack(spacing:0) {
+                            Text("Отправить код еще раз")
+                            Rectangle()
+                                .frame(height: 1)
+                        }
+                        .fixedSize(horizontal: true, vertical: false)
+                        .foregroundStyle(.blue)
+                    }
+                    
+                } else {
+                    Text("""
                  Запросить код можно через
-                 через 5:00
+                 через \(timeInMinutesFormat(timeRemaining))
                  """)
-            .foregroundStyle(.white)
-            .multilineTextAlignment(.center)
-            .padding(.bottom, 20)
-            
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .onReceive(timer) {_ in
+                        if timeRemaining > 0 {
+                            timeRemaining -= 1
+                        } else {
+                            showAnotherSendButton = true
+                        }
+                    }
+                }
+            }
+            .frame(height: 80)
+            .padding(.bottom,8)
+     
             SMSPinTextField(pincode: $pincode)
                 .padding(.bottom, 23)
                 .foregroundStyle(.white)
                 .font(.title2)
             
-            Button("Зарегистрироваться") {
+            Button(buttonLabel) {
                 //
             }
             .setCustomButton(disable: pincode.count != 6)
-           
+            .padding(.bottom, 20)
             
+            Button {
+                //
+            } label: {
+                VStack(spacing:0) {
+                    Text("Я не получил код!")
+                    Rectangle()
+                        .frame(height: 1)
+                }
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: true, vertical: false)
+                .font(.footnote)
+            }
+
+           
         }
+    }
+    
+    private func timeInMinutesFormat(_ secounds:Int) -> String {
+        let minuts = secounds / 60
+        let remainSecounds = secounds % 60
+        
+        var minutsString = String(minuts)
+        if minuts / 10 == 0 {
+            minutsString = "0" + minutsString
+        }
+        var secoundsString = String(remainSecounds)
+        if remainSecounds / 10 == 0 {
+            secoundsString = "0" + secoundsString
+        }
+        
+        return "\(minutsString):\(secoundsString)"
     }
 }
 
@@ -239,6 +294,40 @@ struct SMSPinTextField : View {
     }
 }
 
+struct NoSendCodeView : View {
+
+    var body: some View {
+        ZStack {
+            AppearancesResources.backgroundColor
+                .ignoresSafeArea(.all)
+            
+            VStack {
+                Text("Не пришел код?")
+                    .foregroundStyle(.white)
+                    .font(.title)
+                    .padding(.bottom, 25)
+                Text("""
+                     Обратитесь в чат
+                     поддержки
+                     """)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white)
+                .padding(.bottom, 180)
+                
+                Button("Перейти в чат поддержки") {
+                    //no functional yet
+                }
+                .setCustomButton()
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                BackButton()
+            }
+        }
+    }
+}
+
 
 
 // MARK: SendNumberCode VIEW
@@ -265,7 +354,9 @@ struct SendNumberCodeView : View {
                     .keyboardType(.numberPad)
                     .onChange(of: numberText) { _, newValue in
                         if newValue.count > numberTextLimit {
-                            numberText = String(newValue.prefix(numberTextLimit))
+                            DispatchQueue.main.async {
+                                numberText = String(newValue.prefix(numberTextLimit))
+                            }
                         }
                     }
                     .foregroundStyle(.white)
@@ -373,9 +464,10 @@ extension Bundle {
 #Preview {
     NavigationStack {
         ZStack {
-            AppearancesResources.backgroundColor
-                .ignoresSafeArea(.all)
-            VereficationView()
+//            AppearancesResources.backgroundColor
+//                .ignoresSafeArea(.all)
+            NoSendCodeView()
         }
+//        EnterInAppView(isLogin: true)
     }
 }

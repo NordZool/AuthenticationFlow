@@ -8,16 +8,15 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State var test: String  = ""
     var body: some View {
         ZStack {
             AppearancesResources.backgroundColor
                 .ignoresSafeArea(.all)
 //            MainView(isPincodeExist: false)
-            EnterInAppView(isLogin: false)
+                SMSPinTextField(pincode: $test)
+            
         }
-        .onAppear(perform: {
-            print(CountryData.countries.count)
-        })
     }
 }
 

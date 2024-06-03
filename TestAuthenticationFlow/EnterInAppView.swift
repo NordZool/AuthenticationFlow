@@ -13,7 +13,7 @@ struct EnterInAppView: View {
     //otherwise - is registring
     let isLogin: Bool
     private let mainLabel: String
-
+    
     //вместо state будет паблишер в VM, который скажет - успешно ли отправлен код или нет
     @State private var isSuccessSendCode = false
     
@@ -31,20 +31,23 @@ struct EnterInAppView: View {
             AppearancesResources.backgroundColor
                 .ignoresSafeArea(.all)
                 .zIndex(-1)
-            
-            if isSuccessSendCode {
-                VereficationView()
-                    .transition(AnyTransition.asymmetric(
-                        insertion: .move(edge: .trailing),
-                        removal: .move(edge: .trailing)))
-               
-                
-            }
-            if !isSuccessSendCode {
-                SendNumberCodeView(isSuccess: $isSuccessSendCode)
-                    .transition(AnyTransition.asymmetric(
-                        insertion: .move(edge: .leading),
-                        removal: .move(edge: .leading)))
+            VStack {
+                if isSuccessSendCode {
+                    VereficationView()
+                        .transition(AnyTransition.asymmetric(
+                            insertion: .move(edge: .trailing),
+                            removal: .move(edge: .trailing)))
+                    
+                    
+                }
+                if !isSuccessSendCode {
+                    SendNumberCodeView(isSuccess: $isSuccessSendCode)
+                        .transition(AnyTransition.asymmetric(
+                            insertion: .move(edge: .leading),
+                            removal: .move(edge: .leading)))
+                }
+                Spacer()
+                    .frame(maxHeight: 450)
             }
         }
         //for not changing color of toolbar in scroll
@@ -65,7 +68,7 @@ struct EnterInAppView: View {
                         .foregroundStyle(.white)
                 }
             }
-    }
+        }
         
         
     }
@@ -76,10 +79,163 @@ struct EnterInAppView: View {
 
 // MARK: Verefication VIEW
 struct VereficationView : View {
+    @State private var pincode: String = ""
+    
     var body: some View {
-        Text("Верефикация")
+        VStack {
+            Text("Верефикация")
+                .foregroundStyle(.white)
+                .font(.title)
+                .padding(.bottom, 15)
+            Text("""
+                Введите код из смс,
+                что мы вам отправили
+                """
+            )
+            .foregroundStyle(.gray)
+            .font(.subheadline)
+            .multilineTextAlignment(.center)
+            .padding(.bottom, 20)
+            
+            Text("""
+                 Запросить код можно через
+                 через 5:00
+                 """)
             .foregroundStyle(.white)
-            .font(.title)
+            .multilineTextAlignment(.center)
+            .padding(.bottom, 20)
+            
+            SMSPinTextField(pincode: $pincode)
+                .padding(.bottom, 23)
+                .foregroundStyle(.white)
+                .font(.title2)
+            
+            Button("Зарегистрироваться") {
+                //
+            }
+            .setCustomButton(disable: pincode.count != 6)
+           
+            
+        }
+    }
+}
+
+struct SMSPinTextField : View {
+    @Binding var pincode: String
+    
+    enum FocusPin : CaseIterable {
+        case pinOne, pinTwo, pinThree, pinFour, pinFive, pinSix
+        
+        func next() -> FocusPin? {
+            switch self {
+            case .pinOne:
+                    .pinTwo
+            case .pinTwo:
+                    .pinThree
+            case .pinThree:
+                    .pinFour
+            case .pinFour:
+                    .pinFive
+            case .pinFive:
+                    .pinSix
+            case .pinSix:
+                nil
+            }
+        }
+        
+        func back() -> FocusPin? {
+            switch self {
+            case .pinOne:
+                nil
+            case .pinTwo:
+                    .pinOne
+            case .pinThree:
+                    .pinTwo
+            case .pinFour:
+                    .pinThree
+            case .pinFive:
+                    .pinFour
+            case .pinSix:
+                    .pinFive
+            }
+        }
+    }
+    
+    @FocusState private var focusPin: FocusPin?
+    @State private var pinOne: String = ""
+    @State private var pinTwo: String = ""
+    @State private var pinThree: String = ""
+    @State private var pinFour: String = ""
+    @State private var pinFive: String = ""
+    @State private var pinSix: String = ""
+    
+    private var resultPin : String {
+        pinOne + pinTwo + pinThree + pinFour + pinFive + pinSix
+    }
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            ForEach(FocusPin.allCases, id:\.self) {pin in
+                TextField("", text: bindingPin(for: pin))
+                    .setPinTextField(pin: bindingPin(for: pin))
+                    .padding(.vertical, -3.5)
+                    .setCustomBorder(cornerRadius: 3)
+                //on change string pin
+                    .modifier(OnChangePinModifier(pin: bindingPin(for: pin), perform: { _, newValue in
+                        if newValue.count == 1 {
+                            //if is lasta pin -> unfocus user
+                            focusPin = pin.next()
+                        }
+                        if newValue.count == 0, let back = pin.back() {
+                            focusPin = back
+                        }
+                        
+                        pincode = resultPin
+                    }))
+                    .focused($focusPin, equals: pin)
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal,20)
+        .onTapGesture {
+            if resultPin.isEmpty {
+                focusPin = .pinOne
+            }
+        }
+        
+    }
+    
+    func bindingPin(for pin: FocusPin) -> Binding<String> {
+        switch pin {
+        case .pinOne:
+            $pinOne
+        case .pinTwo:
+            $pinTwo
+        case .pinThree:
+            $pinThree
+        case .pinFour:
+            $pinFour
+        case .pinFive:
+            $pinFive
+        case .pinSix:
+            $pinSix
+        }
+    }
+    
+    private struct OnChangePinModifier : ViewModifier {
+        @Binding var pin: String
+        let perform: (_ oldValue:String,_ newValue:String) -> ()
+        
+        func body(content: Content) -> some View {
+            content
+                .onChange(of: pin) { oldValue, newValue in
+                    perform(oldValue, newValue)
+                }
+            
+            
+        }
     }
 }
 
@@ -98,18 +254,18 @@ struct SendNumberCodeView : View {
             Text("Номер телефона")
                 .font(.footnote)
                 .padding(.bottom, 5)
+                .foregroundStyle(.white)
             HStack {
                 NumberPicker(selectedCountryID: $selectedCountryID,
                              numberLimit: $numberTextLimit,
                              numberText: $numberText)
                 .padding(.trailing, 10)
                 TextField("", text: $numberText)
-                    .setCustomBorder()
+                    .setCustomBorder(cornerRadius: 8)
                     .keyboardType(.numberPad)
-                    .onChange(of: numberText) { oldValue, newValue in
-                        let newCount = newValue.count
-                        if newCount > numberTextLimit {
-                            numberText = String(newValue.dropLast(newCount-numberTextLimit))
+                    .onChange(of: numberText) { _, newValue in
+                        if newValue.count > numberTextLimit {
+                            numberText = String(newValue.prefix(numberTextLimit))
                         }
                     }
                     .foregroundStyle(.white)
@@ -121,6 +277,7 @@ struct SendNumberCodeView : View {
                 Text("Код придет на ваш номер телефона")
                     .font(.footnote)
                     .padding(.bottom, 50)
+                    .foregroundStyle(.white)
                 Button("Получить код") {
                     withAnimation(.easeInOut(duration: 0.4)) {
                         isSuccess = true
@@ -129,7 +286,7 @@ struct SendNumberCodeView : View {
                 .setCustomButton()
             }
             
-            Spacer()
+            
         }
         
         .frame(width: 350)
@@ -163,11 +320,13 @@ struct NumberPicker : View {
                 Image(systemName: "chevron.down")
             }
             .foregroundStyle(.white)
-            .setCustomBorder()
+            .setCustomBorder(cornerRadius: 8)
         }
-        .onChange(of: selectedCountryID, { _, newValue in
-            numberLimit = CountryData.findCountryNumberLimit(newValue) ?? 0
-            numberText = ""
+        .onChange(of: selectedCountryID, { oldValue, newValue in
+            if newValue != oldValue {
+                numberLimit = CountryData.findCountryNumberLimit(newValue) ?? 0
+                numberText = ""
+            }
         })
         .preferredColorScheme(.dark)
     }
@@ -213,7 +372,10 @@ extension Bundle {
 
 #Preview {
     NavigationStack {
-            
-            EnterInAppView(isLogin: true)
+        ZStack {
+            AppearancesResources.backgroundColor
+                .ignoresSafeArea(.all)
+            VereficationView()
+        }
     }
 }

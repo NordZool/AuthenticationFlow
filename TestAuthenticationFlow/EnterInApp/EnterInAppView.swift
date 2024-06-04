@@ -8,12 +8,11 @@
 import SwiftUI
 
 struct EnterInAppView: View {
+    @StateObject private var viewModel = EnterInAppViewModel()
     //otherwise - is registring
     let isLogin: Bool
     private let mainLabel: String
-    
-    //вместо state будет паблишер в VM, который скажет - успешно ли отправлен код или нет
-    @State private var isSuccessSendCode = false
+    @State private var isSuccess = false
     
     init(isLogin: Bool) {
         if isLogin {
@@ -30,8 +29,8 @@ struct EnterInAppView: View {
                 .ignoresSafeArea(.all)
                 .zIndex(-1)
             VStack {
-                if isSuccessSendCode {
-                    VereficationView(buttonLabel: mainLabel)
+                if isSuccess{
+                    VereficationView(viewModel: viewModel, buttonLabel: mainLabel)
                         .transition(AnyTransition.asymmetric(
                             insertion: .move(edge: .trailing),
                             removal: .move(edge: .trailing)))
@@ -39,8 +38,8 @@ struct EnterInAppView: View {
                     
                     
                 }
-                if !isSuccessSendCode {
-                    SendNumberCodeView(isSuccess: $isSuccessSendCode)
+                if !isSuccess {
+                    SendNumberCodeView(viewModel: viewModel, isLogin: isLogin)
                         .transition(AnyTransition.asymmetric(
                             insertion: .move(edge: .leading),
                             removal: .move(edge: .leading)))
@@ -48,7 +47,16 @@ struct EnterInAppView: View {
                 Spacer()
                     .frame(maxHeight: 450)
             }
+            //loadingView
+            if viewModel.isLoading {
+                CustomProgressView()
+            }
         }
+        .onReceive(viewModel.$isValidNumber, perform: { result in
+            withAnimation(.easeInOut(duration: 0.4)) {
+                isSuccess = result
+            }
+        })
         //for not changing color of toolbar in scroll
         .toolbarBackground(AppearancesResources.backgroundColor, for: .navigationBar)
         .toolbarBackground(.automatic, for: .navigationBar)
@@ -73,6 +81,8 @@ struct EnterInAppView: View {
 
 // MARK: Verefication VIEW
 struct VereficationView : View {
+    @ObservedObject var viewModel: EnterInAppViewModel
+    
     @State private var pincode: String = ""
     let buttonLabel: String
     //timer
@@ -135,15 +145,18 @@ struct VereficationView : View {
                 .foregroundStyle(.white)
                 .font(.title2)
             
-            Button(buttonLabel) {
-                //
-            }
-            .setCustomButton(disable: pincode.count != 6)
-            .padding(.bottom, 20)
-            
             Button {
-                //
+                viewModel.matchSMSpin(with: pincode)
             } label: {
+                Text(buttonLabel)
+                    .setCustomButton(disable: pincode.count != 6)
+                    
+            }
+            .padding(.bottom, 20)
+
+            
+            
+            NavigationLink(destination: NoSendCodeView()) {
                 VStack(spacing:0) {
                     Text("Я не получил код!")
                     Rectangle()
@@ -153,6 +166,7 @@ struct VereficationView : View {
                 .fixedSize(horizontal: true, vertical: false)
                 .font(.footnote)
             }
+ 
 
            
         }
@@ -320,6 +334,7 @@ struct NoSendCodeView : View {
                 .setCustomButton()
             }
         }
+        .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 BackButton()
@@ -332,11 +347,14 @@ struct NoSendCodeView : View {
 
 // MARK: SendNumberCode VIEW
 struct SendNumberCodeView : View {
+    @ObservedObject var viewModel: EnterInAppViewModel
+    let isLogin: Bool
+    
     @State private var selectedCountryID = "0182"
     @State private var numberTextLimit = 10
     @State private var numberText = ""
+    @FocusState private var numberTextFocus: Bool
     
-    @Binding var isSuccess: Bool
     
     var body: some View {
         VStack(alignment:.leading) {
@@ -360,6 +378,7 @@ struct SendNumberCodeView : View {
                         }
                     }
                     .foregroundStyle(.white)
+                    .focused($numberTextFocus)
             }
             .padding(.bottom, 15)
             
@@ -369,12 +388,19 @@ struct SendNumberCodeView : View {
                     .font(.footnote)
                     .padding(.bottom, 50)
                     .foregroundStyle(.white)
-                Button("Получить код") {
-                    withAnimation(.easeInOut(duration: 0.4)) {
-                        isSuccess = true
-                    }
+                Button {
+                    numberTextFocus = false
+                    viewModel.checkValidityOf(
+                        (CountryData.findCountryDialcode(selectedCountryID) ?? "") + numberText,
+                        forLogin: isLogin
+                    )
+                } label: {
+                    Text("Получить код")
+                        .setCustomButton(disable: numberText.count < numberTextLimit)
                 }
-                .setCustomButton()
+                
+
+                
             }
             
             
@@ -463,11 +489,7 @@ extension Bundle {
 
 #Preview {
     NavigationStack {
-        ZStack {
-//            AppearancesResources.backgroundColor
-//                .ignoresSafeArea(.all)
-            NoSendCodeView()
-        }
-//        EnterInAppView(isLogin: true)
+   
+        EnterInAppView(isLogin: true)
     }
 }

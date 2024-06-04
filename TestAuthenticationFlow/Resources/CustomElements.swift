@@ -44,6 +44,7 @@ struct CustomButtonModifier : ViewModifier {
                     .fill(disable ? AnyShapeStyle(.gray) : AnyShapeStyle(AppearancesResources.frameGradient))
                     .disabled(disable)
             )
+            .contentShape(RoundedRectangle(cornerRadius: 30))
             
             
     }
@@ -93,4 +94,21 @@ struct BackButton : View {
                 .foregroundStyle(.white)
         }
     }
+}
+
+struct CustomProgressView : View {
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.black.opacity(0.4))
+                .ignoresSafeArea(.all)
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(AppearancesResources.frameGradient)
+                .scaleEffect(3)
+        }
+    }
+}
+
+#Preview {
+    CustomProgressView()
 }
